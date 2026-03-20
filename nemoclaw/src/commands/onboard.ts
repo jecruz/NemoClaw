@@ -152,12 +152,14 @@ function getDefaultOllamaModel(): string {
 }
 
 // Spinner — only activates on interactive TTYs; transparent in CI / piped output.
-// Uses exact NVIDIA green #76B900 on truecolor terminals.
-const _spinGreen =
-  process.stdout.isTTY &&
-  (process.env.COLORTERM === "truecolor" || process.env.COLORTERM === "24bit")
+// Uses exact NVIDIA green #76B900 on truecolor terminals; respects NO_COLOR.
+const _spinColor = !process.env.NO_COLOR && process.stdout.isTTY;
+const _spinGreen = _spinColor
+  ? process.env.COLORTERM === "truecolor" || process.env.COLORTERM === "24bit"
     ? "\x1b[38;2;118;185;0m"
-    : "\x1b[38;5;148m";
+    : "\x1b[38;5;148m"
+  : "";
+const _spinReset = _spinColor ? "\x1b[0m" : "";
 
 function withSpinner<T>(msg: string, task: Promise<T>): Promise<T> {
   if (!process.stdout.isTTY) return task;
@@ -170,7 +172,7 @@ function withSpinner<T>(msg: string, task: Promise<T>): Promise<T> {
   return task.then(
     (result) => {
       clearInterval(timer);
-      process.stdout.write(`\r  ${msg} ${_spinGreen}✓\x1b[0m\n`);
+      process.stdout.write(`\r  ${msg} ${_spinGreen}✓${_spinReset}\n`);
       return result;
     },
     (err: unknown) => {
